@@ -72,14 +72,14 @@ if [ "$newIP" != "$oldIP" ]; then
 	echo -n "Getting zone ID for domain $domain... "
 	zoneJson=$(curl -X GET https://api.cloudflare.com/client/v4/zones?name=$domain $auth_string 2>/dev/null)
 	if [ $(echo "$zoneJson" | jq ".success") != true ]; then
-		echo -n "Cloudflare API failed: "
-		echo $zoneJson | jq -r ".errors[0].message"
+		echo -n "Cloudflare API failed: " >2
+		echo $zoneJson | jq -r ".errors[0].message" >2
 		exit 1
 	fi
 
 	zoneId=$(echo $zoneJson | jq -r ".result[0].id")
 	if [ -z "$zoneId" ] || [ "$zoneId"  == "null" ]; then
-		echo "Failed! Returned $zoneId"
+		echo "Failed! Returned zone id $zoneId" >2
 		exit 1;
 	fi 
 
@@ -88,8 +88,8 @@ if [ "$newIP" != "$oldIP" ]; then
 	echo -n "Getting existing entry for $DNS_ENTRY... "
 	entryJSon=$(curl -X GET https://api.cloudflare.com/client/v4/zones/$zoneId/dns_records?name=$DNS_ENTRY $auth_string 2>/dev/null)
 	if [ $(echo "$entryJSon" | jq ".success") != true ]; then
-		echo -n "Cloudflare API failed: "
-		echo $entryJSon | jq -r ".errors[0].message"
+		echo -n "Cloudflare API failed: " >2
+		echo $entryJSon | jq -r ".errors[0].message" >2
 	fi
 
 	entryResult=$(echo "$entryJSon" | jq ".result[0]")
@@ -97,7 +97,7 @@ if [ "$newIP" != "$oldIP" ]; then
 	entryId=$(echo "$entryResult" | jq -r ".id")
 
 	if [ -z "$entryId" ] || [ "$entryId" == "null" ]; then
-		echo "Failed! Returned id $zoneId"
+		echo "Failed! Returned entry id $entryId" >2
 		exit 1;
 	fi 
 
@@ -107,15 +107,15 @@ if [ "$newIP" != "$oldIP" ]; then
 	newEntry=$(echo "$entryResult" | jq ".content = \"$newIP\"")
 	result=$(curl -X PUT "https://api.cloudflare.com/client/v4/zones/$zoneId/dns_records/$entryId" $auth_string -H "Content-Type: application/json" --data "$newEntry" 2>/dev/null)
 	if [ $(echo "$result" | jq ".success") != true ]; then
-		echo -n "Cloudflare API failed: "
-		echo $zoneJson | jq -r ".errors[0].message"
+		echo -n "Cloudflare API failed: " >2
+		echo $zoneJson | jq -r ".errors[0].message" >2
 		exit 1
 	fi
 	echo "Done!"
 
 	echo -n "Saving new IP address in $ipFile... "
 	if ! echo $newIP 2>/dev/null 1>$ipFile; then
-		echo "Failed!"
+		echo "Save Failed!" >2
 		exit 1
 	fi
 	echo "Done."
