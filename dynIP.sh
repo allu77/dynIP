@@ -6,6 +6,7 @@ show_usage() {
 	echo "Valid OPTIONS" >&2
 	echo "  -e CLOUDFLARE_EMAIL" >&2
 	echo "  -a CLOUDFLARE_API_KEY" >&2
+	echo "  -j JQ_PATH" >&2
 	echo "" >&2
 	echo "OPTIONS and DNS Entry can either be provided as cmd line options or inside" >&2
 	echo "configuration files:" >&2
@@ -13,6 +14,7 @@ show_usage() {
 	echo "  ~/.dynIP" >&2
 }
 
+JQ_PATH="/usr/bin/jq"
 CLOUDFLARE_EMAIL=""
 CLOUDFLARE_API_KEY=""
 DNS_ENTRY=""
@@ -28,6 +30,7 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 		-e) shift ; CLOUDFLARE_EMAIL="$1" ;; 
 		-a) shift ; CLOUDFLARE_API_KEY="$1" ;; 
+		-j) shift ; JQ_PATH="$1" ;; 
 		-*) 
 		    echo "Unknown option $1" >&2
 			show_usage
@@ -71,13 +74,13 @@ fi
 if [ "$newIP" != "$oldIP" ]; then
 	echo -n "Getting zone ID for domain $domain... "
 	zoneJson=$(curl -X GET https://api.cloudflare.com/client/v4/zones?name=$domain $auth_string 2>/dev/null)
-	if [ $(echo "$zoneJson" | jq ".success") != true ]; then
+	if [ $(echo "$zoneJson" | $JQ_PATH ".success") != true ]; then
 		echo -n "Cloudflare API failed: " >2
-		echo $zoneJson | jq -r ".errors[0].message" >2
+		echo $zoneJson | $JQ_PATH -r ".errors[0].message" >2
 		exit 1
 	fi
 
-	zoneId=$(echo $zoneJson | jq -r ".result[0].id")
+	zoneId=$(echo $zoneJson | $JQ_PATH -r ".result[0].id")
 	if [ -z "$zoneId" ] || [ "$zoneId"  == "null" ]; then
 		echo "Failed! Returned zone id $zoneId" >2
 		exit 1;
@@ -87,14 +90,14 @@ if [ "$newIP" != "$oldIP" ]; then
 
 	echo -n "Getting existing entry for $DNS_ENTRY... "
 	entryJSon=$(curl -X GET https://api.cloudflare.com/client/v4/zones/$zoneId/dns_records?name=$DNS_ENTRY $auth_string 2>/dev/null)
-	if [ $(echo "$entryJSon" | jq ".success") != true ]; then
+	if [ $(echo "$entryJSon" | $JQ_PATH ".success") != true ]; then
 		echo -n "Cloudflare API failed: " >2
-		echo $entryJSon | jq -r ".errors[0].message" >2
+		echo $entryJSon | $JQ_PATH -r ".errors[0].message" >2
 	fi
 
-	entryResult=$(echo "$entryJSon" | jq ".result[0]")
+	entryResult=$(echo "$entryJSon" | $JQ_PATH ".result[0]")
 
-	entryId=$(echo "$entryResult" | jq -r ".id")
+	entryId=$(echo "$entryResult" | $JQ_PATH -r ".id")
 
 	if [ -z "$entryId" ] || [ "$entryId" == "null" ]; then
 		echo "Failed! Returned entry id $entryId" >2
@@ -104,11 +107,11 @@ if [ "$newIP" != "$oldIP" ]; then
 	echo "ID $entryId"
 
 	echo -n "Updating $DNS_ENTRY entry... "
-	newEntry=$(echo "$entryResult" | jq ".content = \"$newIP\"")
+	newEntry=$(echo "$entryResult" | $JQ_PATH ".content = \"$newIP\"")
 	result=$(curl -X PUT "https://api.cloudflare.com/client/v4/zones/$zoneId/dns_records/$entryId" $auth_string -H "Content-Type: application/json" --data "$newEntry" 2>/dev/null)
-	if [ $(echo "$result" | jq ".success") != true ]; then
+	if [ $(echo "$result" | $JQ_PATH ".success") != true ]; then
 		echo -n "Cloudflare API failed: " >2
-		echo $zoneJson | jq -r ".errors[0].message" >2
+		echo $zoneJson | $JQ_PATH -r ".errors[0].message" >2
 		exit 1
 	fi
 	echo "Done!"

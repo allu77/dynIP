@@ -18,6 +18,7 @@ Usage: ./dynIP.sh [OPTIONS] [DNS Entry]
 Valid OPTIONS
   -e CLOUDFLARE_EMAIL
   -a CLOUDFLARE_API_KEY
+  -j JQ_PATH
 
 OPTIONS and DNS Entry can either be provided as cmd line options or inside
 configuration files:
