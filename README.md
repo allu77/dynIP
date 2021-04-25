@@ -1,7 +1,7 @@
 # dynIP
 A Script to update a CloudFlare DNS entry based on the host public IP address.
 
-dynIP checks your public IP address using [WhatIs MyIPAddress](https://whatismyipaddress.com/) public API. In case public API changes from the previous execution, it will update an A record on Cloud Flare DNS.
+dynIP checks your public IP address using [WhatIs MyIPAddress](https://whatismyipaddress.com/) public API. In case public IP changes from the previous execution, it will update an A record on Cloud Flare DNS.
 
 ## Pre-requisites
 You will need to following in order to use dynIP
